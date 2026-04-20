@@ -245,4 +245,3 @@ SecureVote is a **production-ready, security-focused voting platform** that demo
 Shashwat
 
 
-
