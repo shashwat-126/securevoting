@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecureVote — Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:        #0d1117;
+      --ink-2:      #3a3f4b;
+      --ink-3:      #6b7280;
+      --surface:    #ffffff;
+      --surface-2:  #f7f8fa;
+      --surface-3:  #eef0f4;
+      --border:     #dde1e9;
+      --accent:     #7c3aed;
+      --accent-2:   #6d28d9;
+      --accent-bg:  #f5f3ff;
+      --success:    #047857;
+      --success-bg: #ecfdf5;
+      --danger:     #b91c1c;
+      --danger-bg:  #fef2f2;
+      --warn:       #92400e;
+      --warn-bg:    #fffbeb;
+      --shadow-sm:  0 1px 3px rgba(0,0,0,.08);
+      --shadow-md:  0 4px 16px rgba(0,0,0,.08);
+      --shadow-lg:  0 20px 48px rgba(0,0,0,.10);
+      --radius:     12px;
+      --radius-sm:  8px;
+      --radius-lg:  20px;
+      --font-serif: 'DM Serif Display', serif;
+      --font-sans:  'DM Sans', system-ui, sans-serif;
+      --sidebar-w:  240px;
+      --topbar-h:   60px;
+    }
+
+    html { font-size: 15px; }
+    body { font-family: var(--font-sans); background: var(--surface-2); color: var(--ink); min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: -1;
+      background: radial-gradient(ellipse 60% 50% at 0% 0%, rgba(124,58,237,.07) 0%, transparent 60%);
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0;
+      background: var(--ink); color: #fff;
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
+    }
+    .sidebar-logo {
+      display: flex; align-items: center; gap: .6rem;
+      padding: 1.25rem 1.25rem 1rem;
+      font-family: var(--font-serif); font-size: 1.15rem;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .logo-icon {
+      width: 30px; height: 30px; background: var(--accent);
+      border-radius: 7px; display: grid; place-items: center; flex-shrink: 0;
+    }
+    .logo-icon svg { width: 16px; height: 16px; }
+
+    .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+    .nav-section {
+      padding: .5rem 1rem .25rem;
+      font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: rgba(255,255,255,.35);
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: .65rem;
+      padding: .6rem 1.25rem; cursor: pointer;
+      font-size: .88rem; color: rgba(255,255,255,.65);
+      border-radius: 0; transition: background .15s, color .15s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .7; }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .nav-item.active { background: rgba(124,58,237,.25); color: #c4b5fd; border-left-color: var(--accent); }
+    .nav-item.active svg { opacity: 1; }
+
+    .sidebar-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .admin-badge {
+      display: flex; align-items: center; gap: .6rem;
+      background: rgba(255,255,255,.07); border-radius: 8px;
+      padding: .6rem .8rem; margin-bottom: .75rem;
+    }
+    .admin-avatar {
+      width: 30px; height: 30px; background: var(--accent);
+      border-radius: 50%; display: grid; place-items: center;
+      font-size: .78rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .admin-info { min-width: 0; }
+    .admin-info .name { font-size: .82rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .admin-info .role { font-size: .72rem; color: rgba(255,255,255,.4); }
+    .btn-logout-sidebar {
+      width: 100%; padding: .5rem; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.6);
+      border-radius: 7px; font-family: inherit; font-size: .82rem; cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-logout-sidebar:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+    /* ── Content area ── */
+    .content {
+      margin-left: var(--sidebar-w); flex: 1;
+      display: flex; flex-direction: column;
+    }
+
+    /* ── Page ── */
+    .page { display: none; padding: 2rem; max-width: 1000px; animation: fadeIn .25s ease; }
+    .page.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .page-header { margin-bottom: 2rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .page-header h1 { font-family: var(--font-serif); font-size: 1.75rem; }
+    .page-header p  { color: var(--ink-3); font-size: .88rem; margin-top: .25rem; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .6rem 1.1rem; border-radius: var(--radius-sm);
+      font-family: inherit; font-size: .86rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all .2s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-2); box-shadow: 0 4px 14px rgba(124,58,237,.35); }
+    .btn-outline {
+      background: var(--surface); color: var(--accent);
+      border: 1.5px solid var(--accent);
+    }
+    .btn-outline:hover { background: var(--accent-bg); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #991b1b; }
+    .btn-sm { padding: .4rem .85rem; font-size: .8rem; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow-sm);
+      padding: 1.5rem;
+    }
+    .card + .card { margin-top: 1rem; }
+    .card-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); margin-bottom: 1rem; }
+
+    /* ── Elections list (admin) ── */
+    .election-row {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: .85rem;
+      padding: 1.25rem 1.5rem;
+      display: grid; grid-template-columns: 1fr auto;
+      align-items: center; gap: 1rem;
+    }
+    .election-row h3 { font-size: .97rem; font-weight: 600; }
+    .election-row .meta { font-size: .8rem; color: var(--ink-3); margin-top: .25rem; }
+    .election-actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+    /* ── Status pill ── */
+    .pill {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .2rem .65rem; border-radius: 999px;
+      font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    }
+    .pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+    .pill.active { background: #d1fae5; color: #065f46; }
+    .pill.active::before { background: #10b981; animation: pulse 1.5s infinite; }
+    .pill.pending { background: #fef3c7; color: #92400e; }
+    .pill.pending::before { background: #f59e0b; }
+    .pill.ended   { background: var(--surface-3); color: var(--ink-3); }
+    .pill.ended::before { background: var(--ink-3); }
+    .pill.results_published { background: #ede9fe; color: #5b21b6; }
+    .pill.results_published::before { background: #7c3aed; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Form ── */
+    .form-row { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); margin-bottom: 1rem; }
+    .form-group { margin-bottom: .9rem; }
+    .form-group label { display: block; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); margin-bottom: .35rem; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: .6rem .85rem; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-family: inherit; font-size: .9rem;
+      color: var(--ink); background: var(--surface); outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    /* ── Alert ── */
+    .alert {
+      display: flex; align-items: flex-start; gap: .5rem;
+      padding: .7rem 1rem; border-radius: var(--radius-sm);
+      font-size: .84rem; line-height: 1.5; margin: .75rem 0;
+    }
+    .alert.success { background: var(--success-bg); color: var(--success); border: 1px solid #a7f3d0; }
+    .alert.error   { background: var(--danger-bg);  color: var(--danger);  border: 1px solid #fecaca; }
+    .alert.warn    { background: var(--warn-bg);    color: var(--warn);    border: 1px solid #fde68a; }
+    .alert.info    { background: var(--accent-bg);  color: var(--accent);  border: 1px solid #ddd6fe; }
+
+    /* ── Key shares display ── */
+    .shares-grid { display: grid; gap: .75rem; margin: 1rem 0; }
+    .share-box {
+      background: var(--ink); color: #a5f3fc;
+      border-radius: var(--radius-sm);
+      padding: .85rem 1rem; font-size: .75rem;
+      font-family: 'Courier New', monospace; word-break: break-all;
+      line-height: 1.6;
+    }
+    .share-box .share-label {
+      font-family: var(--font-sans); font-size: .68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: rgba(165,243,252,.5); margin-bottom: .35rem;
+    }
+
+    /* ── Results ── */
+    .results-list { display: grid; gap: .65rem; margin: 1rem 0; }
+    .result-row {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: .9rem 1.1rem;
+    }
+    .result-row.winner {
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+      border-color: #c4b5fd;
+    }
+    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+    .result-name { font-weight: 700; font-size: .95rem; }
+    .result-votes { font-size: .85rem; color: var(--ink-3); }
+    .result-bar-wrap { background: var(--border); border-radius: 999px; height: 8px; overflow: hidden; }
+    .result-bar { height: 100%; border-radius: 999px; background: var(--accent); transition: width 1s cubic-bezier(.4,0,.2,1); }
+    .result-row.winner .result-bar { background: linear-gradient(90deg, #7c3aed, #5b21b6); }
+    .winner-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      background: #ede9fe; color: #5b21b6;
+      padding: .2rem .6rem; border-radius: 999px;
+      font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    }
+
+    /* ── Stat cards ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
+      gap: .85rem; margin-bottom: 1.75rem;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.1rem; box-shadow: var(--shadow-sm);
+    }
+    .stat-card .num { font-family: var(--font-serif); font-size: 1.7rem; color: var(--accent); line-height: 1; }
+    .stat-card .lbl { font-size: .72rem; color: var(--ink-3); margin-top: .35rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th { background: var(--surface-2); padding: .65rem 1rem; text-align: left; font-weight: 700; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); border-bottom: 1px solid var(--border); }
+    td { padding: .7rem 1rem; border-bottom: 1px solid var(--surface-3); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface-2); }
+
+    /* ── Separator ── */
+    .sep { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+    /* ── Loading ── */
+    .skeleton { background: linear-gradient(90deg,var(--surface-3) 25%,var(--surface-2) 50%,var(--surface-3) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px; height: 80px; margin-bottom: 1rem; }
+    @keyframes shimmer { from{background-position:200% 0} to{background-position:-200% 0} }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+  </style>
+</head>
+<body>
+
+<!-- ── AUTH WALL ─────────────────────────────────────────────── -->
+<div id="authWall" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ink);">
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:2.5rem;width:100%;max-width:380px;box-shadow:var(--shadow-lg)">
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:2rem">
+      <div class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 12l2 2 4-4M12 2a10 10 0 100 20A10 10 0 0012 2z"/></svg></div>
+      <span style="font-family:var(--font-serif);font-size:1.2rem;color:#fff">SecureVote Admin</span>
+    </div>
+    <div class="form-group">
+      <label style="color:rgba(255,255,255,.5)">Username</label>
+      <input type="text" id="adminUser" autocomplete="username" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:#fff" placeholder="admin" onkeydown="if(event.key==='Enter')doAdminLogin()" />
+    </div>
+    <div class="form-group">
+      <label style="color:rgba(255,255,255,.5)">Password</label>
+      <input type="password" id="adminPass" autocomplete="current-password" style="background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:#fff" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:.5rem;justify-content:center" onclick="doAdminLogin()" id="btnAdminLogin">Sign In</button>
+    <div id="adminLoginAlert" style="margin-top:.75rem"></div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ─────────────────────────────────────────────── -->
+<div id="dashboard" style="display:none">
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M9 12l2 2 4-4M12 2a10 10 0 100 20A10 10 0 0012 2z"/></svg>
+      </div>
+      SecureVote
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Management</div>
+      <div class="nav-item active" onclick="nav('elections')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12h8M8 8h5"/></svg>
+        Elections
+      </div>
+      <div class="nav-item" onclick="nav('create')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+        New Election
+      </div>
+      <div class="nav-section">Security</div>
+      <div class="nav-item" onclick="nav('keyshares')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        Key Shares
+      </div>
+      <div class="nav-item" onclick="nav('results')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Results
+      </div>
+      <div class="nav-section">System</div>
+      <div class="nav-item" onclick="nav('audit')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Audit Log
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="admin-badge">
+        <div class="admin-avatar" id="adminAvatar">A</div>
+        <div class="admin-info">
+          <div class="name" id="adminName">Admin</div>
+          <div class="role">Administrator</div>
+        </div>
+      </div>
+      <button class="btn-logout-sidebar" onclick="adminLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- ── ELECTIONS PAGE ───────────────────────────── -->
+    <div class="page active" id="page-elections">
+      <div class="page-header">
+        <div><h1>Elections</h1><p>Manage all elections and their lifecycle.</p></div>
+        <button class="btn btn-primary" onclick="nav('create')">+ New Election</button>
+      </div>
+      <div id="electionsListAdmin"><div class="skeleton"></div><div class="skeleton"></div></div>
+    </div>
+
+    <!-- ── CREATE ELECTION PAGE ─────────────────────── -->
+    <div class="page" id="page-create">
+      <div class="page-header">
+        <div><h1>Create Election</h1><p>Set up a new election with candidates and schedule.</p></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Election Details</div>
+        <div class="form-group">
+          <label>Election Title *</label>
+          <input type="text" id="newTitle" placeholder="e.g. Student Council Election 2025" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="newDesc" placeholder="Brief description of the election…"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date & Time</label>
+            <input type="datetime-local" id="newStart" />
+          </div>
+          <div class="form-group">
+            <label>End Date & Time</label>
+            <input type="datetime-local" id="newEnd" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="createElection()" id="btnCreate">Create Election & Generate Keys</button>
+        <div id="createAlert"></div>
+      </div>
+
+      <!-- New key shares display (shown after creation) -->
+      <div id="sharesDisplay" style="display:none">
+        <hr class="sep" />
+        <div class="alert warn">⚠ <strong>Action required:</strong> Copy and distribute these key shares immediately. They will not be shown again. Any 2 of 3 shares are needed to decrypt results.</div>
+        <div class="shares-grid" id="sharesGrid"></div>
+        <div id="candidateSection">
+          <hr class="sep" />
+          <div class="card-title" style="margin-bottom:.75rem">Add Candidates</div>
+          <div class="form-row">
+            <div class="form-group"><label>Name *</label><input type="text" id="candName" placeholder="Candidate Full Name" /></div>
+            <div class="form-group"><label>Party / Group</label><input type="text" id="candParty" placeholder="Optional" /></div>
+          </div>
+          <div class="form-group"><label>Bio <span style="color:var(--ink-3);font-weight:400">(optional)</span></label><textarea id="candBio" placeholder="Short candidate bio…"></textarea></div>
+          <button class="btn btn-outline" onclick="addCandidate()" id="btnAddCand">Add Candidate</button>
+          <div id="addCandAlert"></div>
+          <div id="candidatesAdded" style="margin-top:1rem;display:none">
+            <div class="card-title" style="margin-bottom:.5rem">Added Candidates</div>
+            <div id="candidatesAddedList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── KEY SHARES PAGE ──────────────────────────── -->
+    <div class="page" id="page-keyshares">
+      <div class="page-header">
+        <div><h1>Submit Key Shares</h1><p>Restore the private key to enable result decryption.</p></div>
+      </div>
+      <div class="card">
+        <div class="alert info" style="margin-bottom:1.25rem">
+          The election private key was split into 3 shares using Shamir's Secret Sharing. Any 2 shares can reconstruct it. The key is only held in memory and cleared after decryption.
+        </div>
+        <div class="form-group">
+          <label>Select Election</label>
+          <select id="keyElectionId" onchange=""></select>
+        </div>
+        <div class="form-group">
+          <label>Key Share 1</label>
+          <textarea id="keyShare1" placeholder="Paste share 1 here…" style="font-family:monospace;font-size:.78rem"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Key Share 2</label>
+          <textarea id="keyShare2" placeholder="Paste share 2 here…" style="font-family:monospace;font-size:.78rem"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitShares()" id="btnShares">Restore Private Key</button>
+        <div id="sharesAlert"></div>
+      </div>
+    </div>
+
+    <!-- ── RESULTS PAGE ─────────────────────────────── -->
+    <div class="page" id="page-results">
+      <div class="page-header">
+        <div><h1>Decrypt Results</h1><p>Tally and reveal election results. Requires key shares to be submitted first.</p></div>
+      </div>
+      <div class="card">
+        <div class="form-group">
+          <label>Select Election</label>
+          <select id="resultsElectionId"></select>
+        </div>
+        <button class="btn btn-primary" onclick="decryptResults()" id="btnDecrypt">Decrypt &amp; Tally</button>
+        <div id="resultsAlert"></div>
+      </div>
+      <div id="resultsDisplay" style="display:none;margin-top:1.5rem">
+        <div class="stats-row" id="resultStats"></div>
+        <div class="card">
+          <div class="card-title">Results</div>
+          <div class="results-list" id="resultsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT LOG PAGE ───────────────────────────── -->
+    <div class="page" id="page-audit">
+      <div class="page-header">
+        <div><h1>Audit Log</h1><p>Full tamper-evident record of all system actions.</p></div>
+        <button class="btn btn-outline btn-sm" onclick="loadAudit()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Action</th>
+              <th>Actor Role</th>
+              <th>Entity</th>
+              <th>IP Address</th>
+            </tr>
+          </thead>
+          <tbody id="auditBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:2rem">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div>
+</div><!-- /dashboard -->
+
+<script>
+  const API =
+  location.hostname === "localhost"
+    ? "http://localhost:3000/api/v1"
+    : "https://securevoting.onrender.com/api/v1";
+  let adminToken = sessionStorage.getItem('sv_admin_token') || '';
+  let adminData  = JSON.parse(sessionStorage.getItem('sv_admin') || 'null');
+  let newElectionId = null;
+
+  // ─── Init ────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    if (adminToken && adminData) showDashboard();
+  });
+
+  // ─── Auth ────────────────────────────────────────────────────
+  async function doAdminLogin() {
+    const username = document.getElementById('adminUser').value.trim();
+    const password = document.getElementById('adminPass').value;
+    if (!username || !password) return setAlert('adminLoginAlert', 'error', 'Enter credentials.');
+
+    document.getElementById('btnAdminLogin').disabled = true;
+    document.getElementById('btnAdminLogin').textContent = 'Signing in…';
+    setAlert('adminLoginAlert', '', '');
+
+    try {
+      const res  = await fetch(`${API}/auth/admin/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Login failed');
+
+      adminToken = data.data.token;
+      adminData  = data.data.admin;
+      sessionStorage.setItem('sv_admin_token', adminToken);
+      sessionStorage.setItem('sv_admin', JSON.stringify(adminData));
+      showDashboard();
+    } catch (e) {
+      setAlert('adminLoginAlert', 'error', e.message);
+    } finally {
+      document.getElementById('btnAdminLogin').disabled = false;
+      document.getElementById('btnAdminLogin').textContent = 'Sign In';
+    }
+  }
+
+  function showDashboard() {
+    document.getElementById('authWall').style.display = 'none';
+    document.getElementById('dashboard').style.display = '';
+    document.getElementById('adminName').textContent = adminData.username;
+    document.getElementById('adminAvatar').textContent = adminData.username[0].toUpperCase();
+    loadElections();
+    populateElectionSelects();
+  }
+
+  function adminLogout() {
+    adminToken = ''; adminData = null;
+    sessionStorage.removeItem('sv_admin_token');
+    sessionStorage.removeItem('sv_admin');
+    document.getElementById('authWall').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+  }
+
+  // ─── Navigation ──────────────────────────────────────────────
+  function nav(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.textContent.trim().toLowerCase().includes(
+        ({elections:'elections',create:'new',keyshares:'key',results:'results',audit:'audit'}[page]||page)
+      )) n.classList.add('active');
+    });
+    if (page === 'elections') loadElections();
+    if (page === 'audit') loadAudit();
+    if (page === 'keyshares' || page === 'results') populateElectionSelects();
+  }
+
+  // ─── Elections list ──────────────────────────────────────────
+  async function loadElections() {
+    const el = document.getElementById('electionsListAdmin');
+    el.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+    try {
+      const res  = await adminFetch(`${API}/admin/elections`);
+      const data = await res.json();
+      if (!data.data.length) {
+        el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--ink-3)">No elections yet. <span style="cursor:pointer;color:var(--accent)" onclick="nav(\'create\')">Create one →</span></div>';
+        return;
+      }
+      el.innerHTML = data.data.map(e => `
+        <div class="election-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+              <h3>${escHtml(e.title)}</h3>
+              <span class="pill ${e.status}">${e.status.replace('_',' ')}</span>
+            </div>
+            <div class="meta">
+              ${e.candidate_count} candidates · ${e.vote_count} votes cast
+              ${e.starts_at ? ' · Starts ' + fmtDate(e.starts_at) : ''}
+              ${e.ends_at   ? ' · Ends '   + fmtDate(e.ends_at)   : ''}
+            </div>
+          </div>
+          <div class="election-actions">
+            ${e.status === 'pending' ? `<button class="btn btn-primary btn-sm" onclick="setStatus('${e.id}','active')">Start Voting</button>` : ''}
+            ${e.status === 'active'  ? `<button class="btn btn-danger btn-sm" onclick="setStatus('${e.id}','ended')">End Election</button>` : ''}
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      el.innerHTML = `<div class="alert error">${err.message}</div>`;
+    }
+  }
+
+  async function setStatus(id, status) {
+    const label = { active: 'start voting for', ended: 'end' }[status] || 'update';
+    if (!confirm(`Are you sure you want to ${label} this election?`)) return;
+    try {
+      const res  = await adminFetch(`${API}/admin/elections/${id}/status`, {
+        method: 'PATCH', body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      loadElections();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  // ─── Create Election ─────────────────────────────────────────
+  async function createElection() {
+    const title    = document.getElementById('newTitle').value.trim();
+    const desc     = document.getElementById('newDesc').value.trim();
+    const starts   = document.getElementById('newStart').value;
+    const ends     = document.getElementById('newEnd').value;
+    if (!title) return setAlert('createAlert', 'error', 'Election title is required.');
+
+    document.getElementById('btnCreate').disabled = true;
+    document.getElementById('btnCreate').textContent = 'Creating…';
+    setAlert('createAlert', '', '');
+
+    try {
+      const res  = await adminFetch(`${API}/admin/elections`, {
+        method: 'POST',
+        body: JSON.stringify({ title, description: desc || undefined,
+          starts_at: starts || undefined, ends_at: ends || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || JSON.stringify(data.errors));
+
+      newElectionId = data.data.election.id;
+
+      // Display shares
+      const { share1, share2, share3 } = data.data.keyShares;
+      document.getElementById('sharesGrid').innerHTML = [
+        ['Share 1 (Key Holder 1)', share1],
+        ['Share 2 (Key Holder 2)', share2],
+        ['Share 3 (Key Holder 3)', share3],
+      ].map(([label, val]) => `
+        <div class="share-box">
+          <div class="share-label">${label}</div>
+          <div>${escHtml(val)}</div>
+        </div>`).join('');
+
+      document.getElementById('sharesDisplay').style.display = '';
+      setAlert('createAlert', 'success', `Election "${escHtml(title)}" created successfully.`);
+    } catch (e) {
+      setAlert('createAlert', 'error', e.message);
+    } finally {
+      document.getElementById('btnCreate').disabled = false;
+      document.getElementById('btnCreate').textContent = 'Create Election & Generate Keys';
+    }
+  }
+
+  // ─── Add candidate ───────────────────────────────────────────
+  let candidatesAdded = [];
+  async function addCandidate() {
+    if (!newElectionId) return setAlert('addCandAlert', 'error', 'Create an election first.');
+    const name  = document.getElementById('candName').value.trim();
+    const party = document.getElementById('candParty').value.trim();
+    const bio   = document.getElementById('candBio').value.trim();
+    if (!name) return setAlert('addCandAlert', 'error', 'Candidate name is required.');
+
+    document.getElementById('btnAddCand').disabled = true;
+    setAlert('addCandAlert', '', '');
+    try {
+      const res  = await adminFetch(`${API}/admin/elections/${newElectionId}/candidates`, {
+        method: 'POST', body: JSON.stringify({ name, party: party || undefined, bio: bio || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      candidatesAdded.push(data.data);
+      document.getElementById('candName').value = '';
+      document.getElementById('candParty').value = '';
+      document.getElementById('candBio').value = '';
+      renderAddedCandidates();
+      setAlert('addCandAlert', 'success', `${escHtml(name)} added.`);
+    } catch (e) {
+      setAlert('addCandAlert', 'error', e.message);
+    } finally {
+      document.getElementById('btnAddCand').disabled = false;
+    }
+  }
+
+  function renderAddedCandidates() {
+    const el = document.getElementById('candidatesAdded');
+    el.style.display = '';
+    document.getElementById('candidatesAddedList').innerHTML = candidatesAdded.map(c => `
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;background:var(--surface-2);border-radius:8px;margin-bottom:.4rem;font-size:.85rem">
+        <span style="font-weight:600">${escHtml(c.name)}</span>
+        ${c.party ? `<span style="color:var(--ink-3)">${escHtml(c.party)}</span>` : ''}
+      </div>`).join('');
+  }
+
+  // ─── Key shares ──────────────────────────────────────────────
+  async function submitShares() {
+    const elecId = document.getElementById('keyElectionId').value;
+    const s1     = document.getElementById('keyShare1').value.trim();
+    const s2     = document.getElementById('keyShare2').value.trim();
+    if (!elecId || !s1 || !s2) return setAlert('sharesAlert', 'error', 'Select an election and enter both shares.');
+
+    document.getElementById('btnShares').disabled = true;
+    setAlert('sharesAlert', '', '');
+    try {
+      const res  = await adminFetch(`${API}/admin/elections/${elecId}/shares`, {
+        method: 'POST', body: JSON.stringify({ shares: [s1, s2] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setAlert('sharesAlert', 'success', data.message + ' You can now go to Results to decrypt.');
+    } catch (e) {
+      setAlert('sharesAlert', 'error', e.message);
+    } finally {
+      document.getElementById('btnShares').disabled = false;
+    }
+  }
+
+  // ─── Decrypt results ─────────────────────────────────────────
+  async function decryptResults() {
+    const elecId = document.getElementById('resultsElectionId').value;
+    if (!elecId) return setAlert('resultsAlert', 'error', 'Select an election.');
+
+    document.getElementById('btnDecrypt').disabled = true;
+    setAlert('resultsAlert', '', '');
+    document.getElementById('resultsDisplay').style.display = 'none';
+
+    try {
+      const res  = await adminFetch(`${API}/admin/elections/${elecId}/results`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      const { election, results, winner, winners, isTie } = data.data;
+      const total = election.totalDecrypted;
+
+      document.getElementById('resultStats').innerHTML = `
+        <div class="stat-card"><div class="num">${total}</div><div class="lbl">Total Votes</div></div>
+        <div class="stat-card"><div class="num">${election.totalVoted}</div><div class="lbl">Participated</div></div>
+        <div class="stat-card"><div class="num">${((election.totalVoted/Math.max(election.totalEligible,1))*100).toFixed(1)}%</div><div class="lbl">Turnout</div></div>
+      `;
+
+      document.getElementById('resultsList').innerHTML = results.map((r) => {
+  const isTopWinner = !isTie && winner && r.candidate.id === winner.candidate.id;
+  const isTopTie = isTie && winners?.some(w => w.candidate.id === r.candidate.id);
+
+  return `
+    <div class="result-row ${isTopWinner || isTopTie ? 'winner' : ''}">
+      <div class="result-header">
+        <div>
+          <span class="result-name">${escHtml(r.candidate.name)}</span>
+          ${r.candidate.party ? `<span style="color:var(--ink-3);font-size:.82rem;margin-left:.5rem">${escHtml(r.candidate.party)}</span>` : ''}
+          ${
+            isTie
+              ? (isTopTie ? '<span class="winner-badge" style="margin-left:.5rem">⚖️ Tie</span>' : '')
+              : (isTopWinner ? '<span class="winner-badge" style="margin-left:.5rem">🏆 Winner</span>' : '')
+          }
+        </div>
+        <div class="result-votes">${r.votes} vote${r.votes !== 1 ? 's' : ''} · ${r.percent}%</div>
+      </div>
+      <div class="result-bar-wrap">
+        <div class="result-bar" style="width:${r.percent}%"></div>
+      </div>
+    </div>`;
+    }).join('');
+      document.getElementById('resultsDisplay').style.display = '';
+    } catch (e) {
+      setAlert('resultsAlert', 'error', e.message);
+    } finally {
+      document.getElementById('btnDecrypt').disabled = false;
+    }
+  }
+
+  // ─── Audit log ───────────────────────────────────────────────
+  async function loadAudit() {
+    document.getElementById('auditBody').innerHTML =
+      '<tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:2rem">Loading…</td></tr>';
+    try {
+      const res  = await adminFetch(`${API}/admin/audit?limit=100`);
+      const data = await res.json();
+      document.getElementById('auditBody').innerHTML = data.data.map(row => `
+        <tr>
+          <td style="white-space:nowrap">${fmtDate(row.created_at)}</td>
+          <td><code style="font-size:.78rem">${escHtml(row.action)}</code></td>
+          <td>${row.actor_role || '—'}</td>
+          <td>${row.entity || '—'}</td>
+          <td style="color:var(--ink-3);font-size:.78rem">${row.ip_address || '—'}</td>
+        </tr>`).join('');
+    } catch (e) {
+      document.getElementById('auditBody').innerHTML =
+        `<tr><td colspan="5" class="alert error">${e.message}</td></tr>`;
+    }
+  }
+
+  // ─── Populate election selects ───────────────────────────────
+  async function populateElectionSelects() {
+    try {
+      const res  = await adminFetch(`${API}/admin/elections`);
+      const data = await res.json();
+      const opts = data.data.map(e => `<option value="${e.id}">${escHtml(e.title)} (${e.status})</option>`).join('');
+      ['keyElectionId','resultsElectionId'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<option value="">— Select election —</option>' + opts;
+      });
+    } catch {}
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────
+  function adminFetch(url, opts = {}) {
+    return fetch(url, {
+      ...opts,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+        ...(opts.headers || {}),
+      },
+    });
+  }
+
+  function setAlert(id, type, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = msg ? `<div class="alert ${type}">${msg}</div>` : '';
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+</script>
+</body>
+</html>
